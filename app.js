@@ -1,17 +1,43 @@
 const express = require('express')
 const app = express()
 const bodyparser = require('body-parser')
+const session = require('express-session')
 const mongoose = require('mongoose')
+const passport = require('passport')
+const LocalStrategy = require('passport-local')
+const passportLocalMongoose = require('passport-local-mongoose')
+const User = require('./models/user.js')
 const Campground = require('./models/campground.js')
 const Comment = require('./models/comment.js')
 const seedDB = require('./seeds.js')  
 seedDB();   // Clear DB and populate with 3 items
 
-mongoose.connect('mongodb://localhost/yelpcamp_db')
+// New mongoose connection logic
+mongoose.connect('mongodb://localhost/yelpcamp_db', { useMongoClient: true })
+// tell Mongoose to use Node global es6 Promises
+mongoose.Promise = global.Promise;
+
+// PASSPORT CONFIG
+app.use(session({
+  secret: "Some Random String",
+  resave: false,
+  saveUninitialized: false
+}))
+app.use(passport.initialize())
+app.use(passport.session())
+passport.use(new LocalStrategy(User.authenticate()))
+passport.serializeUser(User.serializeUser())
+passport.deserializeUser(User.deserializeUser())
+
+
 
 app.set('view engine', 'ejs')
 app.use(express.static(__dirname + '/public'))
 app.use(bodyparser.urlencoded({extended: true}))
+app.use(function(req, res, next) {
+  res.locals.loggedUser = req.user;   // req.locals will be available in all our templaces
+  next()
+})
 
 app.get('/', (req,res) => {
   res.render("landing")
@@ -67,14 +93,14 @@ app.get('/campgrounds/:id', (req, res) => {
 
 // COMMENT routes
 
-app.get('/campgrounds/:id/comments/new', (req, res) => {
+app.get('/campgrounds/:id/comments/new', isLoggedIn, (req, res) => {
   Campground.findById(req.params.id, (err, campground) => {
     if (err) throw err;
     res.render('newComment', {campground: campground})
   })
 })
 
-app.post('/campgrounds/:id/comments', (req, res) => {
+app.post('/campgrounds/:id/comments', isLoggedIn, (req, res) => {
   Campground.findById(req.params.id, (err, campground) => {
     if (err) res.redirect('/campgrounds')
     Comment.create(req.body.comment, (err, comment) => {  
@@ -86,6 +112,43 @@ app.post('/campgrounds/:id/comments', (req, res) => {
     })
   })
 })
+
+// AUTH routes
+app.get('/register', (req, res) => {
+  res.render('register')
+})
+
+app.post('/register', (req, res) => {
+  const newUser = new User({username: req.body.username})
+  User.register(newUser, req.body.password, (err, user) => {
+    if (err) throw err;
+    passport.authenticate('local')(req, res, () => {
+      res.redirect('/campgrounds')
+    })
+  })
+})
+
+// LOGIN routes
+app.get('/login', (req, res) => {
+  res.render('login')
+})
+
+app.post('/login', passport.authenticate('local', {
+  successRedirect: '/campgrounds',
+  failure: '/login'
+}) ,(req, res) => {
+})
+
+// LOGOUT routes
+app.get('/logout', (req, res) => {
+  req.logout();
+  res.redirect('/campgrounds')
+})
+
+function isLoggedIn(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  res.redirect('/login')
+}
 
 app.listen(3000, function() {
   console.log('Server is up and running...')
