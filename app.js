@@ -3,12 +3,14 @@ const app = express()
 const bodyparser = require('body-parser')
 const mongoose = require('mongoose')
 const Campground = require('./models/campground.js')
+const Comment = require('./models/comment.js')
 const seedDB = require('./seeds.js')  
 seedDB();   // Clear DB and populate with 3 items
 
 mongoose.connect('mongodb://localhost/yelpcamp_db')
 
 app.set('view engine', 'ejs')
+app.use(express.static(__dirname + '/public'))
 app.use(bodyparser.urlencoded({extended: true}))
 
 app.get('/', (req,res) => {
@@ -60,7 +62,29 @@ app.get('/campgrounds/:id', (req, res) => {
     if (err) throw err;
     res.render('show', {campground: foundCampground})
   })
-  
+})
+
+
+// COMMENT routes
+
+app.get('/campgrounds/:id/comments/new', (req, res) => {
+  Campground.findById(req.params.id, (err, campground) => {
+    if (err) throw err;
+    res.render('newComment', {campground: campground})
+  })
+})
+
+app.post('/campgrounds/:id/comments', (req, res) => {
+  Campground.findById(req.params.id, (err, campground) => {
+    if (err) res.redirect('/campgrounds')
+    Comment.create(req.body.comment, (err, comment) => {  
+      // req.body.commment is available because of comment[text] & comment[author] on newComment.ejs
+      if (err) throw err;
+      campground.comments.push(comment);
+      campground.save();
+      res.redirect(`/campgrounds/${campground._id}`)
+    })
+  })
 })
 
 app.listen(3000, function() {
