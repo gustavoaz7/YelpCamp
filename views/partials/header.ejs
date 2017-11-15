@@ -28,3 +28,14 @@
         </div>
       </nav>
   
+      <div class="container">
+        <% if (flashError && flashError.length > 0) { %>
+          <div class="alert alert-danger">
+            <%= flashError %>
+          </div>
+        <% } else if (flashSuccess && flashSuccess.length > 0) { %>
+          <div class="alert alert-success">
+            <%= flashSuccess %>
+          </div>
+        <% } %>
+      </div>
