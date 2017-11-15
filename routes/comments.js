@@ -27,10 +27,43 @@ router.post('/', isLoggedIn, (req, res) => {
   })
 })
 
+// Edit comment form
+router.get('/:comment_id/edit', isAuthorOfComment, (req, res) => {
+  Comment.findById(req.params.comment_id, (err, comment) => {
+    if (err) res.redirect('back');
+    res.render('editComment', {comment: comment, campgroundID: req.params.id})
+  })
+})
+
+// Update comment logic
+router.put('/:comment_id', isAuthorOfComment, (req, res) => {
+  Comment.findByIdAndUpdate(req.params.comment_id, req.body.updatedComment, (err, comment) => {
+    if (err) res.redirect('back');
+    res.redirect(`/campgrounds/${req.params.id}`)
+  })
+})
+
+// Remove comment
+router.delete('/:comment_id', isAuthorOfComment, (req, res) => {
+  Comment.findByIdAndRemove(req.params.comment_id, (err) => {
+    res.redirect(`/campgrounds/${req.params.id}`)
+  })
+})
+
 // middleware
 function isLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next();
   res.redirect('/login')
+}
+
+function isAuthorOfComment(req, res, next) {
+  if (req.isAuthenticated()) {
+    Comment.findById(req.params.comment_id, (err, foundComment) => {
+      if (err) res.redirect('back');
+      if (foundComment.author.id.equals(req.user._id)) return next();
+      res.redirect('back')
+    })
+  }
 }
 
 module.exports = router;
