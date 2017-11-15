@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const Campground = require('../models/campground')
+const flash = require('connect-flash')
 
 // INDEX - Show a list of all campgrounds
 router.get('/', (req, res) => {
@@ -28,7 +29,11 @@ router.post('/', isLoggedIn, (req, res) => {
     }
   } 
   Campground.create(newCampground, (err, data) => {
-    if (err) throw err;
+    if (err) {
+      req.flash('error', err)
+    } else {
+      req.flash('success', data.name + 'successfully added.')
+    }
   })
   res.redirect('/campgrounds')
 })
@@ -51,13 +56,15 @@ router.get('/:id/edit', isAuthorOfCampground, (req, res) => {
 // UPDATE - Update selected campground information
 router.put('/:id', isAuthorOfCampground, (req, res) => {
   Campground.findByIdAndUpdate(req.params.id, req.body.updatedCampground, (err, updatedCampground) => {
+    req.flash('success', updatedCampground.name + 'successfully updated.')
     res.redirect('/campgrounds/' + updatedCampground._id)
   } )
 })
 
 // REMOVE - 
 router.delete('/:id', isAuthorOfCampground, (req, res) => {
-  Campground.findByIdAndRemove(req.params.id, (err) => {
+  Campground.findByIdAndRemove(req.params.id, (err, deletedCampground) => {
+    req.flash('success', deletedCampground + 'successfully deleted.')
     res.redirect('/campgrounds')
   })
 })
@@ -65,18 +72,26 @@ router.delete('/:id', isAuthorOfCampground, (req, res) => {
 // middleware
 function isLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next();
+  req.flash('error', "You must log in first.")
   res.redirect('/login')
 }
 
 function isAuthorOfCampground(req, res, next) {
   if (req.isAuthenticated()) {
     Campground.findById(req.params.id, (err, foundCampground) => {
-      if (err) res.redirect('back');
+      if (err) {
+        req.flash('error', "Campground not found.")
+        res.redirect('back')
+      } else if (foundCampground.author.id.equals(req.user._id)) return next();
       // .equals is a mongoose method. === wouldn't work because one is an object and the other a string.
-      if (foundCampground.author.id.equals(req.user._id)) return next();
+      req.flash('error', "You don't have permission to do that.")
       res.redirect('back')
     })
+  } else {
+    req.flash('error', "You must log in first.")
+    res.redirect('back')
   }
+  
 }
 
 module.exports = router;

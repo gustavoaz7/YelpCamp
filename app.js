@@ -3,6 +3,7 @@ const express = require('express')
 const app = express()
 const bodyparser = require('body-parser')
 const session = require('express-session')
+const flash = require('connect-flash')
 const mongoose = require('mongoose')
 const passport = require('passport')
 const LocalStrategy = require('passport-local')
@@ -40,8 +41,11 @@ passport.deserializeUser(User.deserializeUser())
 app.set('view engine', 'ejs')
 app.use(express.static(__dirname + '/public'))
 app.use(bodyparser.urlencoded({extended: true}))
+app.use(flash())
 app.use(function(req, res, next) {
   res.locals.loggedUser = req.user;   // req.locals will be available in all our templaces
+  res.locals.flashError = req.flash('error');
+  res.locals.flashSuccess = req.flash('success');
   next()
 })
 app.use(methodOverride('_method'))

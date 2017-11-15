@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router({mergeParams: true})  // Merge :id from router at app.js so we can retrieve req.params.id
 const Campground = require('../models/campground')
 const Comment = require('../models/comment')
+const flash = require('connect-flash')
 
 // New comment form
 router.get('/new', isLoggedIn, (req, res) => {
@@ -17,11 +18,15 @@ router.post('/', isLoggedIn, (req, res) => {
     if (err) res.redirect('/campgrounds')
     Comment.create(req.body.comment, (err, comment) => {  
       // req.body.commment is available because of comment[text] & comment[author] on newComment.ejs
-      if (err) throw err;
-      comment.author = {id: req.user._id, username: req.user.username }
-      comment.save();
-      campground.comments.push(comment);
-      campground.save();
+      if (err) {
+        req.flash('error', err)
+      } else {
+        comment.author = {id: req.user._id, username: req.user.username }
+        comment.save();
+        campground.comments.push(comment);
+        campground.save();
+        req.flash('success', 'Comment successfully added.')
+      }
       res.redirect(`/campgrounds/${campground._id}`)
     })
   })
@@ -38,7 +43,7 @@ router.get('/:comment_id/edit', isAuthorOfComment, (req, res) => {
 // Update comment logic
 router.put('/:comment_id', isAuthorOfComment, (req, res) => {
   Comment.findByIdAndUpdate(req.params.comment_id, req.body.updatedComment, (err, comment) => {
-    if (err) res.redirect('back');
+    req.flash('success', 'Comment successfully updated.')
     res.redirect(`/campgrounds/${req.params.id}`)
   })
 })
@@ -46,6 +51,7 @@ router.put('/:comment_id', isAuthorOfComment, (req, res) => {
 // Remove comment
 router.delete('/:comment_id', isAuthorOfComment, (req, res) => {
   Comment.findByIdAndRemove(req.params.comment_id, (err) => {
+    req.flash('success', 'Comment successfully deleted.')
     res.redirect(`/campgrounds/${req.params.id}`)
   })
 })
@@ -53,16 +59,23 @@ router.delete('/:comment_id', isAuthorOfComment, (req, res) => {
 // middleware
 function isLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next();
+  req.flash('error', "You must log in first.")
   res.redirect('/login')
 }
 
 function isAuthorOfComment(req, res, next) {
   if (req.isAuthenticated()) {
     Comment.findById(req.params.comment_id, (err, foundComment) => {
-      if (err) res.redirect('back');
-      if (foundComment.author.id.equals(req.user._id)) return next();
+      if (err) {
+        req.flash('error', "Comment not found.")
+        res.redirect('back')
+      } else if (foundComment.author.id.equals(req.user._id)) return next();
+      req.flash('error', "You don't have permission to do that.")
       res.redirect('back')
     })
+  } else {
+    req.flash('error', "You must log in first.")
+    res.redirect('back')
   }
 }
 

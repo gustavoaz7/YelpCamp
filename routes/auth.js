@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const passport = require('passport')
 const User = require('../models/user')
+const flash = require('connect-flash')
 
 
 // Register form
@@ -13,10 +14,14 @@ router.get('/register', (req, res) => {
 router.post('/register', (req, res) => {
   const newUser = new User({username: req.body.username})
   User.register(newUser, req.body.password, (err, user) => {
-    if (err) throw err;
-    passport.authenticate('local')(req, res, () => {
-      res.redirect('/campgrounds')
-    })
+    if (err) {
+      req.flash('error', err.message)
+    } else {
+      passport.authenticate('local')(req, res, () => {
+        req.flash('success', `Hello ${user.username}! Welcome to YelpCamp :)`)
+      })
+    }
+    res.redirect('/campgrounds')
   })
 })
 
@@ -28,19 +33,17 @@ router.get('/login', (req, res) => {
 // Login form logic
 router.post('/login', passport.authenticate('local', {
   successRedirect: '/campgrounds',
-  failure: '/login'
+  failure: '/login',
+  successFlash: "Welcome to YelpCamp!",
+  failureFlash: true
 }) ,(req, res) => {
 })
 
 // Logout
 router.get('/logout', (req, res) => {
   req.logout();
+  req.flash('success', 'User successfully logged out.')
   res.redirect('/campgrounds')
 })
-
-function isLoggedIn(req, res, next) {
-  if (req.isAuthenticated()) return next();
-  res.redirect('/login')
-}
 
 module.exports = router;
