@@ -14,13 +14,14 @@ router.get('/', (req, res) => {
 
 // NEW - Show form to add new campgrounds
 router.get('/new', isLoggedIn, (req, res) => {
-  res.render('new')
+  res.render('newCampground')
 })
 
 // CREATE - Add new campground to DB
 router.post('/', isLoggedIn, (req, res) => {
   const newCampground = {
     name: req.body.name,
+    price: req.body.price,
     image: req.body.image,
     description: req.body.description,
     author: {
