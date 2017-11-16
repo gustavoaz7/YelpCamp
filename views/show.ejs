@@ -17,6 +17,7 @@
           <h4 class="pull-right">$<%= campground.price %>/night</h4>
           <h4><a href="#"></a><%= campground.name %></h4>
           <p><%= campground.description %></p>
+          <p><%= campground.location %></p>
           <p><em>Submitted by: <%= campground.author.username %></em></p>
           <% if(loggedUser && campground.author.id.equals(loggedUser._id)) { %>
             <a class="btn btn-sm btn-warning" href="/campgrounds/<%= campground._id %>/edit">Edit</a>
