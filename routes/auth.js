@@ -7,27 +7,29 @@ const flash = require('connect-flash')
 
 // Register form
 router.get('/register', (req, res) => {
-  res.render('register')
+  res.render('register', {page: 'register'})
 })
 
 // Register form logic
 router.post('/register', (req, res) => {
   const newUser = new User({username: req.body.username})
   User.register(newUser, req.body.password, (err, user) => {
-    if (err) {
+    if (err || !user) {
+      console.log(err);
       req.flash('error', err.message)
+      res.redirect('/register')
     } else {
       passport.authenticate('local')(req, res, () => {
         req.flash('success', `Hello ${user.username}! Welcome to YelpCamp :)`)
+        res.redirect('/campgrounds')
       })
     }
-    res.redirect('/campgrounds')
   })
 })
 
 // Login form
 router.get('/login', (req, res) => {
-  res.render('login')
+  res.render('login', {page: 'login'})
 })
 
 // Login form logic
