@@ -77,4 +77,16 @@ router.get('/logout', (req, res) => {
   res.redirect('/campgrounds')
 })
 
+
+// FACEBOOK ROUTES
+
+router.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }))
+
+router.get('/auth/facebook/callback', passport.authenticate('facebook', {
+  successRedirect: '/campgrounds',
+  failureRedirect: '/login',
+  successFlash: "Welcome to YelpCamp!",
+  failureFlash: true
+}))
+
 module.exports = router;
