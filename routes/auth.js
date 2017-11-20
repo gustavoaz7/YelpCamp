@@ -50,8 +50,8 @@ router.post('/login', passport.authenticate('local', {
 })
 
 // Profile
-router.get('/users/:username', (req, res) => {
-  User.findOne({username: req.params.username}, (err, user) => {
+router.get('/users/:id', (req, res) => {
+  User.findById(req.params.id, (err, user) => {
     console.log(user);
     if (err || !user) {
       console.log(err);
