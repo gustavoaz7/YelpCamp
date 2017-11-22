@@ -62,3 +62,4 @@ typings/
 auth
 config/database.js
 config/auth.js
+config/googleAPI.js
