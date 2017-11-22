@@ -10,35 +10,117 @@
         <li class="list-group-item">Info 3</li>
       </div>
     </div>
+    <!-- Campground Section -->
     <div class="col-md-9">
       <div class="thumbnail">
         <img src="<%= campground.image %>" class="img-responsive">
         <div class="caption-full">
+          <!-- Display Campground Info -->
           <h4 class="pull-right">$<%= campground.price %>/night</h4>
           <h4><a href="#"></a><%= campground.name %></h4>
           <p><%= campground.description %></p>
           <p><%= campground.location %></p>
-          <p><em>Submitted by: <a href="/users/<%= campground.author.id %>"><%= campground.author.username %></a> - <%= moment(campground.createdAt).fromNow() %></em></p>
+          <div class="text-right">
+            <p><em>Submitted by: <a href="/users/<%= campground.author.id %>"><%= campground.author.username %></a> - <%= moment(campground.createdAt).fromNow() %></em></p>
+          </div>
+          <!-- Edit/Delete Campground -->
           <% if(loggedUser && campground.author.id.equals(loggedUser._id)) { %>
-            <a class="btn btn-sm btn-warning" href="/campgrounds/<%= campground._id %>/edit">Edit</a>
+            <button class="btn btn-sm btn-warning" data-toggle="collapse" data-target="#collapseEditCampground">Edit</button>
+            <div class="collapse" id="collapseEditCampground">
+              <div class="well" style="border-left: 3px solid #f0ad4e;">
+                <h4>Edit your campground <small><span class="glyphicon glyphicon glyphicon-pencil"></span></small></h4>
+                <!-- Campground Edit Form -->
+                <form action="/campgrounds/<%= campground._id %>?_method=PUT" method="POST">
+                  <div class="form-group">
+                    <label>Name</label>
+                    <input class="form-control"type="text" name="updatedCampground[name]" value="<%= campground.name %>">
+                  </div>
+                  <div class="form-group">
+                    <label>Price</label>
+                    <input class="form-control"type="number" name="updatedCampground[price]" min="0.01" step="0.01" value="<%= campground.price %>">
+                  </div>
+                  <div class="form-group">
+                    <label>Image URL</label>
+                    <input class="form-control" type="text" name="updatedCampground[image]" value="<%= campground.image %>">
+                  </div>
+                  <div class="form-group">
+                    <label>Location</label>
+                    <input class="form-control" type="text" name="updatedCampground[location]" value="<%= campground.location %>">
+                  </div>
+                  <div class="form-group">
+                    <label>Description</label>
+                    <input class="form-control" type="text" name="updatedCampground[description]" value="<%= campground.description %>">
+                  </div>
+                  <button class="btn btn-warning">Update</button>
+                </form>
+              </div>
+            </div>
             <form id="deleteForm" action="/campgrounds/<%= campground._id %>?_method=DELETE" method="POST">
               <button class="btn btn-sm btn-danger">Delete</button>
             </form>
           <% } %>
         </div>
       </div>
+      <!-- Comment Section -->
       <div class="well">
         <div class="text-right">
-          <a class="btn btn-success" href='/campgrounds/<%= campground._id %>/comments/new'>New Comment</a>
+          <button class="btn btn-success pull-right" data-toggle="collapse" data-target="#collapseComment">
+            <span class="glyphicon glyphicon-plus"></span> Add new comment
+          </button>
+        </div>
+
+        <h4><strong>Comments <span class="glyphicon glyphicon glyphicon-comment"></span></strong></h4>
+        <!-- New Comment -->
+        <div class="collapse" id="collapseComment">
+          <div class="well" style="border-left: 3px solid #5cb85c;">
+            <% if(!loggedUser) { %>
+              <h5>You need to login before you can comment. <a href="/login">Click here</a> to go to the login page.</h5>
+            <% } else {%>
+              <h5>Write your comment <small><span class="glyphicon glyphicon glyphicon-pencil"></span></small></h5>
+              <form action="/campgrounds/<%= campground._id %>/comments" method="POST">
+                <div class="form-group">
+                  <textarea class="form-control" name="comment[text]" placeholder="Write your comment..."></textarea>
+                </div>
+                <div class="form-group">
+                  <button class="btn btn-success btn-sm">Send</button>
+                </div>
+              </form>
+            <% } %>
+          </div>
         </div>
         <hr>
+        <!-- Display comments -->
+        <% if (campground.comments.length === 0) { %>
+          <em style="color: grey;">No comments yet.</em>
+        <% } %>
         <% campground.comments.forEach(comment => { %>
           <div class="row">
             <div class="col-md-12">
-              <strong><%= comment.author.username %></strong> <span class="pull-right"><%= moment(comment.createdAt).fromNow() %></span>
+              <strong><small><span class="glyphicon glyphicon-user"></span></small> <%= comment.author.username %></strong> 
+                <span class="pull-right">
+                  <% if (comment.updatedAt) { %>
+                    <%= moment(comment.updatedAt).fromNow() %> <small><em style="color: grey;">(edited)</em></small>
+                  <% } else { %>
+                    <%= moment(comment.createdAt).fromNow() %>
+                  <% } %>
+                </span>
               <p><%= comment.text %></p>
+              <!-- Edit/Delete Comment -->
               <% if(loggedUser && comment.author.id.equals(loggedUser._id)) { %>
-                <a class="btn btn-xs btn-warning" href="/campgrounds/<%= campground._id %>/comments/<%= comment._id %>/edit">Edit</a>
+                <button class="btn btn-xs btn-warning" data-toggle="collapse" data-target="#collapseEditComment">Edit</button>
+                <div class="collapse" id="collapseEditComment">
+                  <div class="well" style="border-left: 3px solid #f0ad4e;">
+                    <h5>Edit your comment <small><span class="glyphicon glyphicon glyphicon-pencil"></span></small></h5>
+                    <form action="/campgrounds/<%= campground._id %>/comments/<%= comment._id %>?_method=PUT" method="POST">
+                      <div class="form-group">
+                        <textarea class="form-control" name="updatedComment[text]"><%= comment.text %></textarea>
+                      </div>
+                      <div class="form-group">
+                        <button class="btn btn-warning btn-sm">Update</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
                 <form id="deleteForm" action="/campgrounds/<%= campground._id %>/comments/<%= comment._id %>?_method=DELETE" method="POST">
                   <input class="btn btn-xs btn-danger" type="submit" value="Delete">
                 </form>
@@ -52,5 +134,6 @@
 </div>
 
 
-
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <% include partials/footer %>

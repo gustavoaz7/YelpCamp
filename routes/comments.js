@@ -48,7 +48,12 @@ router.get('/:comment_id/edit', isAuthorOfComment, (req, res) => {
 
 // Update comment logic
 router.put('/:comment_id', isAuthorOfComment, (req, res) => {
-  Comment.findByIdAndUpdate(req.params.comment_id, req.body.updatedComment, (err, comment) => {
+  Comment.findByIdAndUpdate(req.params.comment_id, {
+    $set: {
+      text: req.body.updatedComment.text,
+      updatedAt: Date.now()
+    }
+  }, (err, comment) => {
     if (err || !comment) {
       console.log(err);
       req.flash('error', 'Failed to update comment.')
