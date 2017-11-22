@@ -79,7 +79,7 @@ router.get('/logout', (req, res) => {
   res.redirect('/campgrounds')
 })
 
-// Forgot password
+// FORGOT PASSWORD
 router.get('/forgot', (req, res) => {
   res.render('forgot')
 })
@@ -145,6 +145,71 @@ router.post('/forgot', (req, res, next) => {
           req.flash('success', `An email has been sent to ${user.email}`)
           res.redirect('/forgot')
         })
+      })
+    })
+  })
+})
+
+router.get('/reset/:token', (req, res) => {
+  User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: {$gt: Date.now()} }, function(err, user) {
+    if (err) {
+      req.flash('error', 'Password reset token is invalid or has expired.')
+      return res.redirect('/forgot')
+    }
+    res.render('reset', {token: req.params.token})
+  })
+})
+
+router.post('/reset/:token', (req, res) => {
+  User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: {$gt: Date.now()} }, function(err, user) {
+    if (err) {
+      req.flash('error', 'Password reset token is invalid or has expired.')
+      return res.redirect('/forgot')
+    }
+    if (req.body.password !== req.body.confirmPassword) {
+      req.flash('error', 'Passwords do not match.')
+      return res.redirect('/forgot')
+    }
+    user.setPassword(req.body.password, function(err) {   // passport-local-mongoose method
+      if (err) return console.log(err);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      user.save(function(err) {
+        if (err) return console.log(err);
+        req.logIn(user, function(err) {
+          if (err) return console.log(err);
+          return user
+        })
+      })
+    })
+  })
+  .then(user => {
+    nodemailer.createTestAccount((err, account) => {
+      if (err) return console.log(err);
+      const smtpTransport = nodemailer.createTransport({
+        host: account.smtp.host,
+        port: account.smtp.port,
+        secure: account.smtp.secure,
+        auth: {
+          user: account.user,
+          pass: account.pass
+        },
+        logger: false,
+        debug: false // include SMTP traffic in the logs
+      })
+      const mailOptions = {
+        to: user.email,
+        from: 'noreply@yelpcampproj.com',
+        subject: 'Yelpcamp password successfully changed',
+        text: `Hello ${user.username},
+        This is a confirmation that the password for your account has been changed.`
+      }
+      smtpTransport.sendMail(mailOptions, function(err, info) {
+        if (err) return console.log(err.message);
+        console.log('Mail sent successfully');
+        console.log(nodemailer.getTestMessageUrl(info)); // URL to view sent email (ethereal.email)
+        req.flash('success', `Your password has been changed!`)
+        res.redirect('/campgrounds')
       })
     })
   })
