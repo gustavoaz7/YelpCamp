@@ -4,6 +4,7 @@ const Campground = require('../models/campground')
 const Comment = require('../models/comment')
 const flash = require('connect-flash')
 const geocoder = require('geocoder')
+const configGoogleAPI = require('../config/googleAPI').key
 
 // INDEX - Show a list of all campgrounds
 router.get('/', (req, res) => {
@@ -58,7 +59,7 @@ router.get('/:id', (req, res) => {
       req.flash('error', 'Campground not found.')
       return res.redirect('/campgrounds')
     }
-    res.render('show', {campground: foundCampground})
+    res.render('show', {campground: foundCampground, APIkey: configGoogleAPI})
   })
 })
 
@@ -137,7 +138,7 @@ function isAuthorOfCampground(req, res, next) {
     })
   } else {
     req.flash('error', "You must log in first.")
-    res.redirect('back')
+    res.redirect('/login')
   }
 }
 

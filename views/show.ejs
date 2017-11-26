@@ -9,6 +9,9 @@
         <li class="list-group-item">Info 2</li>
         <li class="list-group-item">Info 3</li>
       </div>
+      <div class="thumbnail" id="map">
+
+      </div>
     </div>
     <!-- Campground Section -->
     <div class="col-md-9">
@@ -25,7 +28,7 @@
           </div>
           <!-- Edit/Delete Campground -->
           <% if(loggedUser && campground.author.id.equals(loggedUser._id)) { %>
-            <button class="btn btn-sm btn-warning" data-toggle="collapse" data-target="#collapseEditCampground">Edit</button>
+            <button class="btn btn-sm btn-warning" data-toggle="collapse" data-camp="#collapseEditCampground">Edit</button>
             <div class="collapse" id="collapseEditCampground">
               <div class="well" style="border-left: 3px solid #f0ad4e;">
                 <h4>Edit your campground <small><span class="glyphicon glyphicon glyphicon-pencil"></span></small></h4>
@@ -64,7 +67,7 @@
       <!-- Comment Section -->
       <div class="well">
         <div class="text-right">
-          <button class="btn btn-success pull-right" data-toggle="collapse" data-target="#collapseComment">
+          <button class="btn btn-success pull-right" data-toggle="collapse" data-camp="#collapseComment">
             <span class="glyphicon glyphicon-plus"></span> Add new comment
           </button>
         </div>
@@ -107,7 +110,7 @@
               <p><%= comment.text %></p>
               <!-- Edit/Delete Comment -->
               <% if(loggedUser && comment.author.id.equals(loggedUser._id)) { %>
-                <button class="btn btn-xs btn-warning" data-toggle="collapse" data-target="#collapseEditComment">Edit</button>
+                <button class="btn btn-xs btn-warning" data-toggle="collapse" data-camp="#collapseEditComment">Edit</button>
                 <div class="collapse" id="collapseEditComment">
                   <div class="well" style="border-left: 3px solid #f0ad4e;">
                     <h5>Edit your comment <small><span class="glyphicon glyphicon glyphicon-pencil"></span></small></h5>
@@ -133,7 +136,33 @@
   </div>
 </div>
 
+<script>
+    function initMap() {
+      const camp = { 
+        lat: <%= campground.lat %>, 
+        lng: <%= campground.lng %> 
+      }
+      const options = { 
+        zoom: 8, 
+        center: camp, 
+        scrollwheel: false 
+      }
+      const map = new google.maps.Map(document.getElementById('map'), options)
+      var contentString = `<strong><%= campground.name %></strong><br />
+        <%= campground.location %>
+        <p><em><%= campground.description %></em></p>`;
+      const infowindow = new google.maps.InfoWindow({ content: contentString })
+      const marker = new google.maps.Marker({
+          position: camp,
+          map: map
+      })
+      // addListener is specified at Google Maps API docs
+      marker.addListener('click', () => infowindow.open(map, marker))
+    }
+  </script>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+<script async defer src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script async defer src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=<%= APIkey %>&callback=initMap"></script>
 <% include partials/footer %>
