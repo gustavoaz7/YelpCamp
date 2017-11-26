@@ -52,7 +52,7 @@ router.post('/login', passport.authenticate('local', {
 })
 
 // Profile
-router.get('/users/:id', (req, res) => {
+router.get('/users/:id', isLoggedIn, (req, res) => {
   User.findById(req.params.id, (err, user) => {
     console.log(user);
     if (err || !user) {
@@ -73,7 +73,7 @@ router.get('/users/:id', (req, res) => {
 })
 
 // Logout
-router.get('/logout', (req, res) => {
+router.get('/logout', isLoggedIn, (req, res) => {
   req.logout();
   req.flash('success', 'User successfully logged out.')
   res.redirect('/campgrounds')
@@ -226,5 +226,14 @@ router.get('/auth/facebook/callback', passport.authenticate('facebook', {
   successFlash: "Welcome to YelpCamp!",
   failureFlash: true
 }))
+
+
+// middleware
+function isLoggedIn(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  req.flash('error', "You must log in first.")
+  res.redirect('/login')
+}
+
 
 module.exports = router;
