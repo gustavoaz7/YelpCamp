@@ -28,7 +28,7 @@ module.exports = function(passport) {
     callbackURL: configAuth.facebook.callbackURL
   }, function(token, refreshToken, profile, done) {
     console.log(profile);
-    // asynchronous
+    // asynchronous (User.findOne won't fire until we have all our data back from Facebook)
     process.nextTick(function() {
       User.findOne({ 'facebook.id': profile.id }, function(err, user) {
         if (err) return done(err);
@@ -40,8 +40,10 @@ module.exports = function(passport) {
           'facebook.email': typeof profile.emails !== 'undefined' ? profile.emails[0].value : 'empty@mail.com'
         })
         console.log(newUser);
-        newUser.save();
-        return done(null, newUser)
+        newUser.save(function(err) {
+          if (err) return console.log(err);
+          return done(null, newUser)
+        });
       })
     })
   }))
