@@ -23,7 +23,7 @@
           </div>
           <!-- Edit/Delete Campground -->
           <% if(loggedUser && campground.author.id.equals(loggedUser._id)) { %>
-            <button class="btn btn-sm btn-warning" data-toggle="collapse" data-camp="#collapseEditCampground">Edit</button>
+            <button class="btn btn-sm btn-warning" data-toggle="collapse" data-target="#collapseEditCampground">Edit</button>
             <div class="collapse" id="collapseEditCampground">
               <div class="well" style="border-left: 3px solid #f0ad4e;">
                 <h4>Edit your campground <small><span class="glyphicon glyphicon glyphicon-pencil"></span></small></h4>
@@ -105,7 +105,7 @@
               <p><%= comment.text %></p>
               <!-- Edit/Delete Comment -->
               <% if(loggedUser && comment.author.id.equals(loggedUser._id)) { %>
-                <button class="btn btn-xs btn-warning" data-toggle="collapse" data-camp="#collapseEditComment">Edit</button>
+                <button class="btn btn-xs btn-warning" data-toggle="collapse" data-target="#collapseEditComment">Edit</button>
                 <div class="collapse" id="collapseEditComment">
                   <div class="well" style="border-left: 3px solid #f0ad4e;">
                     <h5>Edit your comment <small><span class="glyphicon glyphicon glyphicon-pencil"></span></small></h5>
