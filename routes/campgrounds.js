@@ -59,7 +59,7 @@ router.get('/:id', (req, res) => {
       req.flash('error', 'Campground not found.')
       return res.redirect('/campgrounds')
     }
-    res.render('show', {campground: foundCampground, APIkey: configGoogleAPI})
+    res.render('show', {campground: foundCampground, APIkey: process.env.GoogleAPI || configGoogleAPI})
   })
 })
 

@@ -24,7 +24,7 @@ const configDB = require('./config/database.js')
   // tell Mongoose to use Node global es6 Promises
 mongoose.Promise = global.Promise;
   // New mongoose connection logic
-mongoose.connect(configDB.url, { useMongoClient: true })
+mongoose.connect(process.env.DB || configDB.url, { useMongoClient: true })
   .then(() => console.log('Database connected successfully.'))
   .catch(err => console.log('Error connecting to database: ' + err.message))
 
@@ -74,6 +74,6 @@ app.get('/', (req,res) => {
 })
 
 
-app.listen(3000, function() {
+app.listen(process.env.PORT || 3000, function() {
   console.log('Server is up and running...')
 })
