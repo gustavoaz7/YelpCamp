@@ -216,18 +216,6 @@ router.post('/reset/:token', (req, res) => {
 })
 
 
-// FACEBOOK ROUTES
-
-router.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }))
-
-router.get('/auth/facebook/callback', passport.authenticate('facebook', {
-  successRedirect: '/campgrounds',
-  failureRedirect: '/login',
-  successFlash: "Welcome to YelpCamp!",
-  failureFlash: true
-}))
-
-
 // middleware
 function isLoggedIn(req, res, next) {
   if (req.isAuthenticated()) return next();

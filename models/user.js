@@ -6,16 +6,10 @@ const UserSchema = new mongoose.Schema({
   password: String,
   firstName: String,
   lastName: String,
-  email: {type: String, unique: true, required: true},
+  email: {type: String, unique: true},
   avatar: String,
   resetPasswordToken: String,
   resetPasswordExpires: Date,
-  facebook: {
-    id: String,
-    token: String,
-    email: String,
-    name: String
-  }
 })
 
 UserSchema.plugin(passportLocalMongoose)
