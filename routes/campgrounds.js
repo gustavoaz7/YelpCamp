@@ -8,10 +8,20 @@ const configGoogleAPI = require('../config/googleAPI').key
 
 // INDEX - Show a list of all campgrounds
 router.get('/', (req, res) => {
-  Campground.find({}, (err, allCampgrounds) => {
-    if (err) return console.log(err);
-    res.render('index', {campgrounds:allCampgrounds})
-  })
+  // req.xhr returns Boolean whether the request appears to be AJAX
+  // (issued with its "X-Requested-With" header set to "XMLHttpRequest)
+  if (req.xhr) {
+    const regex = new RegExp(req.query.search, 'gi')
+    Campground.find({name: regex}, (err, campgrounds) => {
+      if (err) return console.log(err);
+      if (req.xhr) return res.status(200).json(campgrounds)
+    })
+  } else {
+    Campground.find({}, (err, allCampgrounds) => {
+      if (err) return console.log(err);
+      res.render('index', {campgrounds:allCampgrounds})
+    })
+  }
 })
 
 // NEW - Show form to add new campgrounds
