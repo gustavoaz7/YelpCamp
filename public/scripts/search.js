@@ -30,6 +30,6 @@ cgSearch.addEventListener('input', (e) => {
   ajax.send()
 })
 
-document.querySelector('#campground-grid').addEventListener('submit', (e) => {
+document.querySelector('#campground-search').addEventListener('submit', (e) => {
   e.preventDefault()
 })
