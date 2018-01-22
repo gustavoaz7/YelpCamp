@@ -10,6 +10,8 @@ const UserSchema = new mongoose.Schema({
   avatar: String,
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  validationToken: String,
+  validated: {type: Boolean, default: false} 
 })
 
 UserSchema.plugin(passportLocalMongoose)

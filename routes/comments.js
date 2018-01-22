@@ -1,11 +1,12 @@
 const express = require('express')
 const router = express.Router({mergeParams: true})  // Merge :id from router at app.js so we can retrieve req.params.id
-const Campground = require('../models/campground')
-const Comment = require('../models/comment')
 const flash = require('connect-flash')
 
+const Campground = require('../models/campground')
+const Comment = require('../models/comment')
+
 // New comment form
-router.get('/new', isLoggedIn, (req, res) => {
+router.get('/new', isValidatedAndLoggedIn, (req, res) => {
   Campground.findById(req.params.id, (err, campground) => {
     if (err) return console.log(err);
     res.render('newComment', {campground: campground})
@@ -13,7 +14,7 @@ router.get('/new', isLoggedIn, (req, res) => {
 })
 
 // New comment form logic
-router.post('/', isLoggedIn, (req, res) => {
+router.post('/', isValidatedAndLoggedIn, (req, res) => {
   Campground.findById(req.params.id, (err, campground) => {
     if (err || !campground) {
       console.log(err);
@@ -89,7 +90,11 @@ router.delete('/:comment_id', isAuthorOfComment, (req, res) => {
 })
 
 // middleware
-function isLoggedIn(req, res, next) {
+function isValidatedAndLoggedIn(req, res, next) {
+  if (!req.user.validated) {
+    req.flash('error', 'You must validate your account first. Please check your email.')
+    return res.redirect('/login')
+  }
   if (req.isAuthenticated()) return next();
   req.flash('error', "You must log in first.")
   res.redirect('/login')

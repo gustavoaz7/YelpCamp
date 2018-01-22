@@ -1,12 +1,13 @@
 const express = require('express')
 const router = express.Router()
 const passport = require('passport')
-const User = require('../models/user')
-const Campground = require('../models/campground')
 const flash = require('connect-flash')
 const nodemailer = require('nodemailer')
 const crypto = require('crypto')
 
+const User = require('../models/user')
+const Campground = require('../models/campground')
+const mailer = require('../config/mailer')
 
 // Register form
 router.get('/register', (req, res) => {
@@ -15,25 +16,101 @@ router.get('/register', (req, res) => {
 
 // Register form logic
 router.post('/register', (req, res) => {
-  const newUser = new User({
-    username: req.body.username,
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    email: req.body.email,
-    avatar: req.body.avatar
+  crypto.randomBytes(20, function(err, buf) {
+    const token = buf.toString('hex')
+
+    const newUser = new User({
+      username: req.body.username,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.body.email,
+      avatar: req.body.avatar,
+      validationToken: token
+    })
+    User.register(newUser, req.body.password, (err, user) => {
+      if (err || !user) {
+        console.log(err);
+        req.flash('error', err.message)
+        res.redirect('/register')
+      } else {
+        // // Generate SMTP service account from ethereal.email
+        // nodemailer.createTestAccount((err, account) => {
+        //   if (err) return console.log(err);
+          // // Create a SMTP transporter object
+          // const smtpTransport = nodemailer.createTransport({
+          //   host: account.smtp.host,
+          //   port: account.smtp.port,
+          //   secure: account.smtp.secure,
+          //   auth: {
+          //     user: account.user,
+          //     pass: account.pass
+          //   },
+          //   logger: false,
+          //   debug: false // include SMTP traffic in the logs
+          // })
+        // })
+
+        // Create transport to deliver message
+        /*
+        *  Mailtrap is a fake SMTP server for development tests.
+        *  No email is really sent to users
+        */
+        const smtpTransport = nodemailer.createTransport({
+          host: "smtp.mailtrap.io", 
+          port: 2525,
+          auth: {
+            user: process.env.MAILER_USER || mailer.user,
+            pass: process.env.MAILER_PASS || mailer.pass
+          }
+        })
+        const mailOptions = {
+          to: user.email,
+          from: process.env.MAILER_DEFAULT_ADDRESS || mailer.defaultAddress,
+          subject: 'Yelpcamp Account Validation',
+          text: `
+          Hello ${user.username}, 
+          To complete your registration please click on the following link, or paste this into your browser:
+          ${process.env.baseURL ? `${process.env.baseURL}/validate/${token}/${user._id}` : `http://localhost:3000/validate/${token}/${user._id}`}`
+        }
+        smtpTransport.sendMail(mailOptions, function(err, info) {
+          if (err) return console.log(err.message);
+          console.log('Mail sent successfully');
+          req.flash('success', `A validation email has been sent to ${user.email}`)
+          res.redirect('/login')
+        })
+      }
+    })
   })
-  User.register(newUser, req.body.password, (err, user) => {
-    if (err || !user) {
-      console.log(err);
-      req.flash('error', err.message)
-      res.redirect('/register')
-    } else {
-      // login with newly created user
-      passport.authenticate('local')(req, res, () => {
-        req.flash('success', `Hello ${user.username}! Welcome to YelpCamp :)`)
-        res.redirect('/campgrounds')
+})
+
+// Validate user account
+router.get('/validate/:token/:id', (req, res) => {
+  User.findById(req.params.id, (err, user) => {
+    if (err) return console.log(err);
+    if (!user) {
+      req.flash('error', 'User not found.')
+      return res.redirect('/login')
+    }
+    if (req.params.token !== user.validationToken) {
+      req.flash('error', 'Incorrect validation token.')
+      return res.redirect('/login')
+    }
+    if (user.validated) {
+      return req.logIn(user, (err) => {
+        if (err) return console.log(err);
+        req.flash('success', `User already validated. Welcome back, ${user.username}.`)
+        return res.redirect('/campgrounds')
       })
     }
+
+    User.findByIdAndUpdate(user._id, {$set: { validated: true}}, (err, updatedUser) => {
+      if (err) return console.log(err);
+      req.logIn(updatedUser, (err) => {
+        if (err) return console.log(err);
+        req.flash('success', `User successfully validated! Welcome to YelpCamp, ${updatedUser.username}! :)`)
+        return res.redirect('/campgrounds')
+      })
+    })
   })
 })
 
@@ -52,16 +129,14 @@ router.post('/login', passport.authenticate('local', {
 })
 
 // Profile
-router.get('/users/:id', isLoggedIn, (req, res) => {
+router.get('/users/:id', isValidatedAndLoggedIn, (req, res) => {
   User.findById(req.params.id, (err, user) => {
-    console.log(user);
     if (err || !user) {
       console.log(err);
       req.flash('error', err.message)
       return res.redirect('/login')
     }
     Campground.find({'author.id': user._id}, (err, userCampgrounds) => {
-      console.log(userCampgrounds);
       if (err) {
         console.log(err);
         req.flash('error', err.message)
@@ -73,7 +148,7 @@ router.get('/users/:id', isLoggedIn, (req, res) => {
 })
 
 // Logout
-router.get('/logout', isLoggedIn, (req, res) => {
+router.get('/logout', isValidatedAndLoggedIn, (req, res) => {
   req.logout();
   req.flash('success', 'User successfully logged out.')
   res.redirect('/campgrounds')
@@ -105,46 +180,30 @@ router.post('/forgot', (req, res, next) => {
       })
     })
     .then(user => {
-      // Generate SMTP service account from ethereal.email
-      nodemailer.createTestAccount((err, account) => {
-        if (err) return console.log(err);
-        /* === If not using a test account to send email ===
-        const smtpTransport = nodemailer.createTransport({
-          service: 'Gmail', 
-          auth: {
-            user: 'yelpcamp_mail@gmail.com',
-            pass: require('../config/mail.js').mail
-          }
-        });
-        */  
-        // Create a SMTP transporter object
-        const smtpTransport = nodemailer.createTransport({
-          host: account.smtp.host,
-          port: account.smtp.port,
-          secure: account.smtp.secure,
-          auth: {
-            user: account.user,
-            pass: account.pass
-          },
-          logger: false,
-          debug: false // include SMTP traffic in the logs
-        })
-        const mailOptions = {
-          to: user.email,
-          from: 'noreply@yelpcampproj.com',
-          subject: 'Yelpcamp Password Reset',
-          text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.
-          Please click on the following link, or paste this into your browser to complete the process:
-          http://localhost:3000/reset/${token}
-          If you did not request this, please ignore this email and your password will remain unchanged.`
+      const smtpTransport = nodemailer.createTransport({
+        host: "smtp.mailtrap.io", 
+        port: 2525,
+        auth: {
+          user: process.env.MAILER_USER || mailer.user,
+          pass: process.env.MAILER_PASS || mailer.pass
         }
-        smtpTransport.sendMail(mailOptions, function(err, info) {
-          if (err) return console.log(err.message);
-          console.log('Mail sent successfully');
-          console.log(nodemailer.getTestMessageUrl(info)); // URL to view sent email (ethereal.email)
-          req.flash('success', `An email has been sent to ${user.email}`)
-          res.redirect('/forgot')
-        })
+      })
+      const mailOptions = {
+        to: user.email,
+        from: process.env.MAILER_DEFAULT_ADDRESS || mailer.defaultAddress,
+        subject: 'Yelpcamp Password Reset',
+        text: `
+        Hello ${user.username},
+        You are receiving this because you (or someone else) have requested the reset of the password for your account.
+        Please click on the following link, or paste this into your browser to complete the process:
+        ${process.env.baseURL ? process.env.baseURL+'/reset/'+token : `http://localhost:3000/reset/${token}`}
+        If you did not request this, please ignore this email and your password will remain unchanged.`
+      }
+      smtpTransport.sendMail(mailOptions, function(err, info) {
+        if (err) return console.log(err.message);
+        console.log('Mail sent successfully');
+        req.flash('success', `An email has been sent to ${user.email}`)
+        res.redirect('/forgot')
       })
     })
   })
@@ -184,40 +243,52 @@ router.post('/reset/:token', (req, res) => {
     })
   })
   .then(user => {
-    nodemailer.createTestAccount((err, account) => {
-      if (err) return console.log(err);
-      const smtpTransport = nodemailer.createTransport({
-        host: account.smtp.host,
-        port: account.smtp.port,
-        secure: account.smtp.secure,
-        auth: {
-          user: account.user,
-          pass: account.pass
-        },
-        logger: false,
-        debug: false // include SMTP traffic in the logs
-      })
-      const mailOptions = {
-        to: user.email,
-        from: 'noreply@yelpcampproj.com',
-        subject: 'Yelpcamp password successfully changed',
-        text: `Hello ${user.username},
-        This is a confirmation that the password for your account has been changed.`
+    // nodemailer.createTestAccount((err, account) => {
+    //   if (err) return console.log(err);
+      // const smtpTransport = nodemailer.createTransport({
+      //   host: account.smtp.host,
+      //   port: account.smtp.port,
+      //   secure: account.smtp.secure,
+      //   auth: {
+      //     user: account.user,
+      //     pass: account.pass
+      //   },
+      //   logger: false,
+      //   debug: false // include SMTP traffic in the logs
+      // })
+
+    const smtpTransport = nodemailer.createTransport({
+      host: "smtp.mailtrap.io",
+      port: 2525,
+      auth: {
+        user: process.env.MAILER_USER || mailer.user,
+        pass: process.env.MAILER_PASS || mailer.pass
       }
-      smtpTransport.sendMail(mailOptions, function(err, info) {
-        if (err) return console.log(err.message);
-        console.log('Mail sent successfully');
-        console.log(nodemailer.getTestMessageUrl(info)); // URL to view sent email (ethereal.email)
-        req.flash('success', `Your password has been changed!`)
-        res.redirect('/campgrounds')
-      })
+    })
+    const mailOptions = {
+      to: user.email,
+      from: process.env.MAILER_DEFAULT_ADDRESS || mailer.defaultAddress,
+      subject: 'Yelpcamp password successfully changed',
+      text: `
+      Hello ${user.username},
+      This is a confirmation that the password for your account has been changed.`
+    }
+    smtpTransport.sendMail(mailOptions, function(err, info) {
+      if (err) return console.log(err.message);
+      console.log('Mail sent successfully');
+      req.flash('success', `Your password has been changed!`)
+      res.redirect('/campgrounds')
     })
   })
 })
 
 
 // middleware
-function isLoggedIn(req, res, next) {
+function isValidatedAndLoggedIn(req, res, next) {
+  if (!req.user.validated) {
+    req.flash('error', 'You must validate your account first. Please check your email.')
+    return res.redirect('/login')
+  }
   if (req.isAuthenticated()) return next();
   req.flash('error', "You must log in first.")
   res.redirect('/login')

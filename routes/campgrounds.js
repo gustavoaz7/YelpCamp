@@ -1,9 +1,10 @@
 const express = require('express')
 const router = express.Router()
-const Campground = require('../models/campground')
-const Comment = require('../models/comment')
 const flash = require('connect-flash')
 const geocoder = require('geocoder')
+
+const Campground = require('../models/campground')
+const Comment = require('../models/comment')
 const configGoogleAPI = require('../config/googleAPI').key
 
 // INDEX - Show a list of all campgrounds
@@ -25,12 +26,12 @@ router.get('/', (req, res) => {
 })
 
 // NEW - Show form to add new campgrounds
-router.get('/new', isLoggedIn, (req, res) => {
+router.get('/new', isValidatedAndLoggedIn, (req, res) => {
   res.render('newCampground')
 })
 
 // CREATE - Add new campground to DB
-router.post('/', isLoggedIn, (req, res) => {
+router.post('/', isValidatedAndLoggedIn, (req, res) => {
   geocoder.geocode(req.body.location,  (err, geo) => {
     if (err || geo.status !== "OK") {
       req.flash('error', err || `Status of your location search: ${geo.status}`)
@@ -128,7 +129,11 @@ router.delete('/:id', isAuthorOfCampground, (req, res) => {
 })
 
 // middleware
-function isLoggedIn(req, res, next) {
+function isValidatedAndLoggedIn(req, res, next) {
+  if (!req.user.validated) {
+    req.flash('error', 'You must validate your account first. Please check your email.')
+    return res.redirect('/login')
+  }
   if (req.isAuthenticated()) return next();
   req.flash('error', "You must log in first.")
   res.redirect('/login')

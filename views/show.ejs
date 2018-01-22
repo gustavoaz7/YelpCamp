@@ -73,7 +73,9 @@
           <div class="well" style="border-left: 3px solid #5cb85c;">
             <% if(!loggedUser) { %>
               <h5>You need to login before you can comment. <a href="/login">Click here</a> to go to the login page.</h5>
-            <% } else {%>
+            <% } else if (!loggedUser.validated) { %>
+              <h5>You need to validate your account before you can comment. Please check your email.</h5>
+            <% } else { %>
               <h5>Write your comment <small><span class="glyphicon glyphicon glyphicon-pencil"></span></small></h5>
               <form action="/campgrounds/<%= campground._id %>/comments" method="POST">
                 <div class="form-group">
